@@ -1,9 +1,6 @@
 import os
 
-google_claims =  {'iss': 'https://accounts.google.com',
-                  'azp': '78908852817-cgqo107ieek019bkr5sd9ohm7avv7cht.apps.googleusercontent.com',
-                  'aud': '78908852817-cgqo107ieek019bkr5sd9ohm7avv7cht.apps.googleusercontent.com'
-}
+
 
 JWT_SECRET = os.environ["JWT_SECRET"]
 TOKEN_TIME = int(os.environ["TOKEN_EXP_TIME"])
@@ -15,6 +12,11 @@ OAUTH_TOKEN_URI = os.environ["OAUTH_TOKEN_URI"] # can be found at https://accoun
 OUATH_SUCCESS_REDIRECT_URI = os.environ["OUATH_SUCCESS_REDIRECT_URI"]
 OUATH_FAIL_REDIRECT_URI = os.environ["OUATH_FAIL_REDIRECT_URI"]
 OUATH_JWKS_URI = os.environ["OUATH_JWKS_URI"]
+
+google_claims =  {'iss': 'https://accounts.google.com',
+                  'azp': OAUTH_CLIENT_ID,
+                  'aud': OAUTH_CLIENT_ID
+}
 
 print(f"JWT_SECRET {JWT_SECRET}")
 print(f"TOKEN_TIME {TOKEN_TIME}")

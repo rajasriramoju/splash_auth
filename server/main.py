@@ -16,7 +16,7 @@ from jose import jwt
 import httpx
 from starlette.responses import StreamingResponse
 from starlette.background import BackgroundTask
-from starlette.status import HTTP_403_FORBIDDEN
+from starlette.status import HTTP_403_FORBIDDEN, HTTP_502_BAD_GATEWAY
 
 
 from .config import config
@@ -124,6 +124,9 @@ async def endpoint_reverse_proxy(request: Request,
         return await _reverse_proxy(request)
     except Exception as e:
         print(e)
+        raise HTTPException(
+                status_code=HTTPException, detail=f"Excpetion talking to service {e}"
+        )
 
 
 client = httpx.AsyncClient(
@@ -144,6 +147,7 @@ async def _reverse_proxy(request: Request, scopes: Optional[List[str]] = None) -
     rp_req = client.build_request(request.method, url,
                                   headers=request.headers.raw,
                                   content=await request.body())
+    
     rp_resp = await client.send(rp_req, stream=True)
     return StreamingResponse(
         rp_resp.aiter_raw(),
