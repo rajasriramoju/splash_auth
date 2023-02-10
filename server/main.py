@@ -130,9 +130,7 @@ async def endpoint_reverse_proxy(request: Request,
 
 
 client = httpx.AsyncClient(
-        base_url="http://prefect_server:4200",
-        limits=httpx.Limits(max_connections=100),
-        timeout=httpx.Timeout(20, connect=20))
+        base_url="http://prefect_server:4200")
 
 async def close(resp: StreamingResponse):
     await resp.aclose()
