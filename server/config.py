@@ -1,4 +1,7 @@
 import os
+import logging
+
+logger = logging.getLogger("splash_auth.config")
 
 
 
@@ -12,23 +15,32 @@ OAUTH_TOKEN_URI = os.environ["OAUTH_TOKEN_URI"] # can be found at https://accoun
 OUATH_SUCCESS_REDIRECT_URI = os.environ["OUATH_SUCCESS_REDIRECT_URI"]
 OUATH_FAIL_REDIRECT_URI = os.environ["OUATH_FAIL_REDIRECT_URI"]
 OUATH_JWKS_URI = os.environ["OUATH_JWKS_URI"]
+HTTP_CLIENT_MAX_CONNECTIONS = os.getenv("HTTP_CLIENT_MAX_CONNECTIONS", 100)
+HTTP_CLIENT_TIMEOUT_ALL= os.getenv("HTTP_CLIENT_TIMEOUT_ALL", 5.0)
+HTTP_CLIENT_TIMEOUT_CONNECT = os.getenv("HTTP_CLIENT_TIMEOUT_CONNECT", 3.0)
+HTTP_CLIENT_TIMEOUT_POOL = os.getenv("HTTP_CLIENT_TIMEOUT_POOL", 10)
+
+
 
 google_claims =  {'iss': 'https://accounts.google.com',
                   'azp': OAUTH_CLIENT_ID,
                   'aud': OAUTH_CLIENT_ID
 }
 
-print(f"JWT_SECRET {JWT_SECRET}")
-print(f"TOKEN_TIME {TOKEN_TIME}")
-print(f"OAUTH_AUTH_ENDPOINT {OAUTH_AUTH_ENDPOINT}")
-print(f"OAUTH_CLIENT_ID {OAUTH_CLIENT_ID}")
-print(f"OAUTH_CLIENT_SECRET is a secret")
-print(f"OAUTH_REDIRECT_URI {OAUTH_REDIRECT_URI}")
-print(f"OAUTH_TOKEN_URI {OAUTH_TOKEN_URI}")
-print(f"OUATH_SUCCESS_REDIRECT_URI {OUATH_SUCCESS_REDIRECT_URI}")
-print(f"OUATH_FAIL_REDIRECT_URI {OUATH_FAIL_REDIRECT_URI}")
-print(f"OUATH_JWKS_URI {OUATH_JWKS_URI}")
-
+logger.info(f"JWT_SECRET {JWT_SECRET}")
+logger.info(f"TOKEN_TIME {TOKEN_TIME}")
+logger.info(f"OAUTH_AUTH_ENDPOINT {OAUTH_AUTH_ENDPOINT}")
+logger.info(f"OAUTH_CLIENT_ID {OAUTH_CLIENT_ID}")
+logger.info(f"OAUTH_CLIENT_SECRET is a secret")
+logger.info(f"OAUTH_REDIRECT_URI {OAUTH_REDIRECT_URI}")
+logger.info(f"OAUTH_TOKEN_URI {OAUTH_TOKEN_URI}")
+logger.info(f"OUATH_SUCCESS_REDIRECT_URI {OUATH_SUCCESS_REDIRECT_URI}")
+logger.info(f"OUATH_FAIL_REDIRECT_URI {OUATH_FAIL_REDIRECT_URI}")
+logger.info(f"OUATH_JWKS_URI {OUATH_JWKS_URI}")
+logger.info(f"HTTP_CLIENT_MAX_CONNECTIONS  {HTTP_CLIENT_MAX_CONNECTIONS}")
+logger.info(f"HTTP_CLIENT_TIMEOUT_ALL  {HTTP_CLIENT_TIMEOUT_ALL}")
+logger.info(f"HTTP_CLIENT_TIMEOUT_CONNECT  {HTTP_CLIENT_TIMEOUT_CONNECT}")
+logger.info(f"HTTP_CLIENT_TIMEOUT_POOL  {HTTP_CLIENT_TIMEOUT_POOL}")
 class Config():
     jwt_secret = JWT_SECRET
     token_time = TOKEN_TIME
@@ -40,5 +52,10 @@ class Config():
     oauth_success_redirect_uri = OUATH_SUCCESS_REDIRECT_URI
     oauth_fail_redirect_uri = OUATH_FAIL_REDIRECT_URI
     oauth_jwks_uri = OUATH_JWKS_URI
+
+    http_client_max_connections = HTTP_CLIENT_MAX_CONNECTIONS
+    http_client_timeout_all = HTTP_CLIENT_TIMEOUT_ALL
+    http_client_timeout_connect = HTTP_CLIENT_TIMEOUT_CONNECT
+    http_client_timeout_pool = HTTP_CLIENT_TIMEOUT_POOL
 
 config = Config()

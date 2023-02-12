@@ -36,15 +36,6 @@ app.include_router(oidc_router)
 
 ALS_TOKEN_NAME = "als_token"
 
-HTTP_CLIENT_MAX_CONNECTIONS = os.getenv("HTTP_CLIENT_MAX_CONNECTIONS", 100)
-HTTP_CLIENT_TIMEOUT_ALL= os.getenv("HTTP_CLIENT_TIMEOUT_ALL", 5.0)
-HTTP_CLIENT_TIMEOUT_CONNECT = os.getenv("HTTP_CLIENT_TIMEOUT_CONNECT", 3.0)
-HTTP_CLIENT_TIMEOUT_POOL = os.getenv("HTTP_CLIENT_TIMEOUT_POOL", 10)
-logger.info(f"HTTP_CLIENT_MAX_CONNECTIONS  {HTTP_CLIENT_MAX_CONNECTIONS}")
-logger.info(f"HTTP_CLIENT_TIMEOUT_ALL  {HTTP_CLIENT_TIMEOUT_ALL}")
-logger.info(f"HTTP_CLIENT_TIMEOUT_CONNECT  {HTTP_CLIENT_TIMEOUT_CONNECT}")
-logger.info(f"HTTP_CLIENT_TIMEOUT_POOL  {HTTP_CLIENT_TIMEOUT_POOL}")
-
 http_bearer = HTTPBearer(auto_error=False)
 
 AUTH_SITE = """
@@ -71,8 +62,11 @@ AUTH_SITE = """
 """
 
 def new_httpx_client():
-    limits = httpx.Limits(max_connections=HTTP_CLIENT_MAX_CONNECTIONS)
-    timeout = httpx.Timeout(HTTP_CLIENT_TIMEOUT_ALL, connect=HTTP_CLIENT_TIMEOUT_CONNECT, pool=HTTP_CLIENT_TIMEOUT_POOL)
+    limits = httpx.Limits(max_connections=config.http_client_max_connections)
+    timeout = httpx.Timeout(
+        config.http_client_timeout_all,
+        connect=config.http_client_timeout_connect,
+        pool=config.http_client_timeout_pool)
     return httpx.AsyncClient(
             base_url="http://prefect_server:4200", limits=limits, timeout=timeout)
 client = new_httpx_client()
@@ -85,6 +79,7 @@ async def shutdown_event():
 class Scopes(str, Enum):
     GET = "get"
     POsT = "post"
+
 
 @app.get("/login", response_class=HTMLResponse)
 async def endpoint_login(redirect : Union[str, None] = None):
