@@ -149,7 +149,7 @@ async def endpoint_reverse_proxy(request: Request,
         await client.aclose()
         client = new_httpx_client()
         raise HTTPException(
-                status_code=HTTPException, detail=f"Excpetion talking to service"
+                status_code=HTTP_502_BAD_GATEWAY, detail=f"Excpetion talking to service"
         )
 
 
