@@ -125,12 +125,13 @@ async def endpoint_reverse_proxy(request: Request,
     except Exception as e:
         print(e)
         raise HTTPException(
-                status_code=HTTPException, detail=f"Excpetion talking to service {e}"
+                status_code=HTTPException, detail=f"Excpetion talking to service"
         )
 
-
+limits = httpx.Limits(max_connections=100)
+timeout = httpx.Timeout(None)
 client = httpx.AsyncClient(
-        base_url="http://prefect_server:4200")
+        base_url="http://prefect_server:4200", limits=limits, timeout=timeout)
 
 async def close(resp: StreamingResponse):
     await resp.aclose()
