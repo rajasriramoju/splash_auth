@@ -36,6 +36,14 @@ app.include_router(oidc_router)
 
 ALS_TOKEN_NAME = "als_token"
 
+HTTP_CLIENT_MAX_CONNECTIONS = os.getenv("HTTP_CLIENT_MAX_CONNECTIONS", 100)
+HTTP_CLIENT_TIMEOUT_ALL= os.getenv("HTTP_CLIENT_TIMEOUT_ALL", 5.0)
+HTTP_CLIENT_TIMEOUT_CONNECT = os.getenv("HTTP_CLIENT_TIMEOUT_CONNECT", 3.0)
+HTTP_CLIENT_TIMEOUT_POOL = os.getenv("HTTP_CLIENT_TIMEOUT_POOL", 10)
+logger.info(f"HTTP_CLIENT_MAX_CONNECTIONS  {HTTP_CLIENT_MAX_CONNECTIONS}")
+logger.info(f"HTTP_CLIENT_TIMEOUT_ALL  {HTTP_CLIENT_TIMEOUT_ALL}")
+logger.info(f"HTTP_CLIENT_TIMEOUT_CONNECT  {HTTP_CLIENT_TIMEOUT_CONNECT}")
+logger.info(f"HTTP_CLIENT_TIMEOUT_POOL  {HTTP_CLIENT_TIMEOUT_POOL}")
 
 http_bearer = HTTPBearer(auto_error=False)
 
@@ -63,8 +71,8 @@ AUTH_SITE = """
 """
 
 def new_httpx_client():
-    limits = httpx.Limits(max_connections=100)
-    timeout = httpx.Timeout(None)
+    limits = httpx.Limits(max_connections=HTTP_CLIENT_MAX_CONNECTIONS)
+    timeout = httpx.Timeout(HTTP_CLIENT_TIMEOUT_ALL, connect=HTTP_CLIENT_TIMEOUT_CONNECT, pool=HTTP_CLIENT_TIMEOUT_POOL)
     return httpx.AsyncClient(
             base_url="http://prefect_server:4200", limits=limits, timeout=timeout)
 client = new_httpx_client()
@@ -88,7 +96,7 @@ async def endpoint_login(redirect : Union[str, None] = None):
     # return RedirectResponse("http://noether.lbl.gov:7443/data_workspace/login")
 
 
-@app.api_route("/{path:path}", methods=["GET", "POST", "PATCH", "DELETE"])
+@app.api_route("/{path:path}", methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS", "HEAD"])
 async def endpoint_reverse_proxy(request: Request,
                         response: Response,
                         als_token: Union[str, None] = Cookie(default=None),
@@ -107,12 +115,13 @@ async def endpoint_reverse_proxy(request: Request,
         user is redirected to the /login endpoint, which allows them to login.
     
     """
-
+    logger.info(f"{request.method} - {request.url}")
     ### check for api key in bearer
     if bearer: 
         if bearer.credentials in users_db.api_keys:
             return await _reverse_proxy(request)
         else:
+            logger.debug(f"bearer found, but unknown api_key  {bearer.credentials}")
             raise HTTPException(
                 status_code=HTTP_403_FORBIDDEN, detail="Could not validate credentials"
             )
@@ -126,7 +135,7 @@ async def endpoint_reverse_proxy(request: Request,
         decoded_value = jwt.decode(als_token, config.jwt_secret, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
         # Signature has expired
-        print("Signature expired in cookie")
+        logger.debug("Signature expired in cookie")
         return RedirectResponse("/login")
 
     response.status_code = 200
@@ -136,6 +145,7 @@ async def endpoint_reverse_proxy(request: Request,
         #  a problem exists with the client not accepting new connections
         #  this is ugly, but we try and keep the service running by killing 
         #  the client and starting fresh
+        logger.error("Exception from http client", exc_info=1)
         await client.aclose()
         client = new_httpx_client()
         raise HTTPException(
