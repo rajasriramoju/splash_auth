@@ -1,5 +1,6 @@
 import logging
 from enum import Enum
+import os
 from typing import List, Optional, Union
 
 from fastapi import (
@@ -35,6 +36,7 @@ app.include_router(oidc_router)
 
 ALS_TOKEN_NAME = "als_token"
 
+
 http_bearer = HTTPBearer(auto_error=False)
 
 AUTH_SITE = """
@@ -60,9 +62,17 @@ AUTH_SITE = """
 </html>
 """
 
+def new_httpx_client():
+    limits = httpx.Limits(max_connections=100)
+    timeout = httpx.Timeout(None)
+    return httpx.AsyncClient(
+            base_url="http://prefect_server:4200", limits=limits, timeout=timeout)
+client = new_httpx_client()
+
 @app.on_event('shutdown')
 async def shutdown_event():
     await client.aclose()
+
 
 class Scopes(str, Enum):
     GET = "get"
@@ -123,15 +133,16 @@ async def endpoint_reverse_proxy(request: Request,
     try:
         return await _reverse_proxy(request)
     except Exception as e:
-        print(e)
+        #  a problem exists with the client not accepting new connections
+        #  this is ugly, but we try and keep the service running by killing 
+        #  the client and starting fresh
+        await client.aclose()
+        client = new_httpx_client()
         raise HTTPException(
                 status_code=HTTPException, detail=f"Excpetion talking to service"
         )
 
-limits = httpx.Limits(max_connections=100)
-timeout = httpx.Timeout(None)
-client = httpx.AsyncClient(
-        base_url="http://prefect_server:4200", limits=limits, timeout=timeout)
+
 
 async def close(resp: StreamingResponse):
     await resp.aclose()
