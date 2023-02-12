@@ -67,12 +67,14 @@ def new_httpx_client():
         config.http_client_timeout_all,
         connect=config.http_client_timeout_connect,
         pool=config.http_client_timeout_pool)
+    
     return httpx.AsyncClient(
             base_url="http://prefect_server:4200", limits=limits, timeout=timeout)
 client = new_httpx_client()
 
 @app.on_event('shutdown')
 async def shutdown_event():
+    global client
     await client.aclose()
 
 
@@ -141,6 +143,7 @@ async def endpoint_reverse_proxy(request: Request,
         #  this is ugly, but we try and keep the service running by killing 
         #  the client and starting fresh
         logger.error("Exception from http client", exc_info=1)
+        global client
         await client.aclose()
         client = new_httpx_client()
         raise HTTPException(
@@ -155,7 +158,7 @@ async def close(resp: StreamingResponse):
 async def _reverse_proxy(request: Request, scopes: Optional[List[str]] = None) -> StreamingResponse:
     # # cheap and quick scope feature
     # if scopes and request.method.lower() in sceope
-
+    global client
 
     url = httpx.URL(path=request.url.path,
                     query=request.url.query.encode("utf-8"))
