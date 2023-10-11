@@ -1,24 +1,16 @@
 import logging
-from enum import Enum
 import os
+from enum import Enum
 from typing import List, Optional, Union
 
-from fastapi import (
-    Cookie,
-    Depends,
-    FastAPI,
-    HTTPException,
-    Request,
-    Response
-)
+import httpx
+from fastapi import Cookie, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import HTTPBearer
 from jose import jwt
-import httpx
-from starlette.responses import StreamingResponse
 from starlette.background import BackgroundTask
+from starlette.responses import StreamingResponse
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_502_BAD_GATEWAY
-
 
 from .config import config
 from .oidc import oidc_router
@@ -61,18 +53,24 @@ AUTH_SITE = """
 </html>
 """
 
+
 def new_httpx_client():
     limits = httpx.Limits(max_connections=config.http_client_max_connections)
     timeout = httpx.Timeout(
         config.http_client_timeout_all,
         connect=config.http_client_timeout_connect,
-        pool=config.http_client_timeout_pool)
-    
+        pool=config.http_client_timeout_pool,
+    )
+
     return httpx.AsyncClient(
-            base_url="http://prefect_server:4200", limits=limits, timeout=timeout)
+        base_url="http://prefect_server:4200", limits=limits, timeout=timeout
+    )
+
+
 client = new_httpx_client()
 
-@app.on_event('shutdown')
+
+@app.on_event("shutdown")
 async def shutdown_event():
     global client
     await client.aclose()
@@ -84,37 +82,43 @@ class Scopes(str, Enum):
 
 
 @app.get("/login", response_class=HTMLResponse)
-async def endpoint_login(redirect : Union[str, None] = None):
+async def endpoint_login(redirect: Union[str, None] = None):
     """
     This endpoint prints a login form. Currently, this directs the user to google for login.
     The mechanics of OIDC login from google are handled in oidc.py
-    """  
-    return AUTH_SITE.format(config.oauth_endpoint, config.oauth_redirect_uri, config.oauth_client_id )
+    """
+    return AUTH_SITE.format(
+        config.oauth_endpoint, config.oauth_redirect_uri, config.oauth_client_id
+    )
     # return RedirectResponse("http://noether.lbl.gov:7443/data_workspace/login")
 
 
-@app.api_route("/{path:path}", methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS", "HEAD"])
-async def endpoint_reverse_proxy(request: Request,
-                        response: Response,
-                        als_token: Union[str, None] = Cookie(default=None),
-                        # api_key: APIKey = Depends(get_api_key_from_request),
-                        bearer: HTTPBearer = Depends(http_bearer)) -> StreamingResponse:
+@app.api_route(
+    "/{path:path}", methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS", "HEAD"]
+)
+async def endpoint_reverse_proxy(
+    request: Request,
+    response: Response,
+    als_token: Union[str, None] = Cookie(default=None),
+    # api_key: APIKey = Depends(get_api_key_from_request),
+    bearer: HTTPBearer = Depends(http_bearer),
+) -> StreamingResponse:
     """
-    This endpoint server as a reverse proxy for prefect messages. It authenticates every message using one of 
+    This endpoint server as a reverse proxy for prefect messages. It authenticates every message using one of
     two methods.
 
     1. Authorization: Bearer <api_key>
-        This method is allows clients to send a provided key. It is the primary way that prefect agents 
+        This method is allows clients to send a provided key. It is the primary way that prefect agents
         can authenticate.
 
     2. Cookie
-        This method is used for logging into the prefect UI. If a cookie is not set in the message, the 
+        This method is used for logging into the prefect UI. If a cookie is not set in the message, the
         user is redirected to the /login endpoint, which allows them to login.
-    
+
     """
     logger.info(f"{request.method} - {request.url}")
-    ### check for api key in bearer
-    if bearer: 
+    # check for api key in bearer
+    if bearer:
         if bearer.credentials in users_db.api_keys:
             return await _reverse_proxy(request)
         else:
@@ -122,14 +126,14 @@ async def endpoint_reverse_proxy(request: Request,
             raise HTTPException(
                 status_code=HTTP_403_FORBIDDEN, detail="Could not validate credentials"
             )
-    
-    ### check for cookie
+
+    # check for cookie
     if not als_token:
         return RedirectResponse("/login")
-    
-    ### check if cookie's value is valid
+
+    # check if cookie's value is valid
     try:
-        decoded_value = jwt.decode(als_token, config.jwt_secret, algorithms=["HS256"])
+        jwt.decode(als_token, config.jwt_secret, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
         # Signature has expired
         logger.debug("Signature expired in cookie")
@@ -138,34 +142,35 @@ async def endpoint_reverse_proxy(request: Request,
     response.status_code = 200
     try:
         return await _reverse_proxy(request)
-    except Exception as e:
+    except Exception:
         #  a problem exists with the client not accepting new connections
-        #  this is ugly, but we try and keep the service running by killing 
+        #  this is ugly, but we try and keep the service running by killing
         #  the client and starting fresh
         logger.error("Exception from http client", exc_info=1)
         global client
         await client.aclose()
         client = new_httpx_client()
         raise HTTPException(
-                status_code=HTTP_502_BAD_GATEWAY, detail=f"Excpetion talking to service"
+            status_code=HTTP_502_BAD_GATEWAY, detail="Excpetion talking to service"
         )
-
 
 
 async def close(resp: StreamingResponse):
     await resp.aclose()
 
-async def _reverse_proxy(request: Request, scopes: Optional[List[str]] = None) -> StreamingResponse:
+
+async def _reverse_proxy(
+    request: Request, scopes: Optional[List[str]] = None
+) -> StreamingResponse:
     # # cheap and quick scope feature
     # if scopes and request.method.lower() in sceope
     global client
 
-    url = httpx.URL(path=request.url.path,
-                    query=request.url.query.encode("utf-8"))
-    rp_req = client.build_request(request.method, url,
-                                  headers=request.headers.raw,
-                                  content=await request.body())
-    
+    url = httpx.URL(path=request.url.path, query=request.url.query.encode("utf-8"))
+    rp_req = client.build_request(
+        request.method, url, headers=request.headers.raw, content=await request.body()
+    )
+
     rp_resp = await client.send(rp_req, stream=True)
     return StreamingResponse(
         rp_resp.aiter_raw(),
@@ -173,4 +178,3 @@ async def _reverse_proxy(request: Request, scopes: Optional[List[str]] = None) -
         headers=rp_resp.headers,
         background=BackgroundTask(close, rp_resp),
     )
-

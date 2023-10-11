@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "splash_auth"
+description = "Authenticating proxy with oidc and api_key support"
+readme = { file = "README.md", content-type = "text/markdown" }
+
+requires-python = ">=3.11"
+
+
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11"
+]
+
+dependencies = [
+   "fastapi>=0.68.0,<0.69.0",
+    "uvicorn>=0.15.0,<0.16.0",
+    "python-jose",
+    "httpx==0.23.3",
+    "pyyaml"
+
+]
+
+dynamic = ["version"]
+
+
+[tool.hatch]
+version.source = "vcs"
+build.hooks.vcs.version-file = "server/_version.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true

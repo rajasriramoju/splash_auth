@@ -1,37 +1,38 @@
-import os
 import logging
+import os
 
 logger = logging.getLogger("splash_auth.config")
 
 
-
 JWT_SECRET = os.environ["JWT_SECRET"]
 TOKEN_TIME = int(os.environ["TOKEN_EXP_TIME"])
-OAUTH_AUTH_ENDPOINT=os.environ["OAUTH_AUTH_ENDPOINT"]
+OAUTH_AUTH_ENDPOINT = os.environ["OAUTH_AUTH_ENDPOINT"]
 OAUTH_CLIENT_ID = os.environ["OAUTH_CLIENT_ID"]
 OAUTH_CLIENT_SECRET = os.environ["OAUTH_CLIENT_SECRET"]
 OAUTH_REDIRECT_URI = os.environ["OAUTH_REDIRECT_URI"]
-OAUTH_TOKEN_URI = os.environ["OAUTH_TOKEN_URI"] # can be found at https://accounts.google.com/.well-known/openid-configuration
+OAUTH_TOKEN_URI = os.environ[
+    "OAUTH_TOKEN_URI"
+]  # can be found at https://accounts.google.com/.well-known/openid-configuration
 OUATH_SUCCESS_REDIRECT_URI = os.environ["OUATH_SUCCESS_REDIRECT_URI"]
 OUATH_FAIL_REDIRECT_URI = os.environ["OUATH_FAIL_REDIRECT_URI"]
 OUATH_JWKS_URI = os.environ["OUATH_JWKS_URI"]
 HTTP_CLIENT_MAX_CONNECTIONS = os.getenv("HTTP_CLIENT_MAX_CONNECTIONS", 100)
-HTTP_CLIENT_TIMEOUT_ALL= os.getenv("HTTP_CLIENT_TIMEOUT_ALL", 5.0)
+HTTP_CLIENT_TIMEOUT_ALL = os.getenv("HTTP_CLIENT_TIMEOUT_ALL", 5.0)
 HTTP_CLIENT_TIMEOUT_CONNECT = os.getenv("HTTP_CLIENT_TIMEOUT_CONNECT", 3.0)
 HTTP_CLIENT_TIMEOUT_POOL = os.getenv("HTTP_CLIENT_TIMEOUT_POOL", 10)
 
 
-
-google_claims =  {'iss': 'https://accounts.google.com',
-                  'azp': OAUTH_CLIENT_ID,
-                  'aud': OAUTH_CLIENT_ID
+google_claims = {
+    "iss": "https://accounts.google.com",
+    "azp": OAUTH_CLIENT_ID,
+    "aud": OAUTH_CLIENT_ID,
 }
 
 logger.info(f"JWT_SECRET {JWT_SECRET}")
 logger.info(f"TOKEN_TIME {TOKEN_TIME}")
 logger.info(f"OAUTH_AUTH_ENDPOINT {OAUTH_AUTH_ENDPOINT}")
 logger.info(f"OAUTH_CLIENT_ID {OAUTH_CLIENT_ID}")
-logger.info(f"OAUTH_CLIENT_SECRET is a secret")
+logger.info("OAUTH_CLIENT_SECRET is a secret")
 logger.info(f"OAUTH_REDIRECT_URI {OAUTH_REDIRECT_URI}")
 logger.info(f"OAUTH_TOKEN_URI {OAUTH_TOKEN_URI}")
 logger.info(f"OUATH_SUCCESS_REDIRECT_URI {OUATH_SUCCESS_REDIRECT_URI}")
@@ -41,7 +42,9 @@ logger.info(f"HTTP_CLIENT_MAX_CONNECTIONS  {HTTP_CLIENT_MAX_CONNECTIONS}")
 logger.info(f"HTTP_CLIENT_TIMEOUT_ALL  {HTTP_CLIENT_TIMEOUT_ALL}")
 logger.info(f"HTTP_CLIENT_TIMEOUT_CONNECT  {HTTP_CLIENT_TIMEOUT_CONNECT}")
 logger.info(f"HTTP_CLIENT_TIMEOUT_POOL  {HTTP_CLIENT_TIMEOUT_POOL}")
-class Config():
+
+
+class Config:
     jwt_secret = JWT_SECRET
     token_time = TOKEN_TIME
     oauth_endpoint = OAUTH_AUTH_ENDPOINT
@@ -57,5 +60,6 @@ class Config():
     http_client_timeout_all = HTTP_CLIENT_TIMEOUT_ALL
     http_client_timeout_connect = HTTP_CLIENT_TIMEOUT_CONNECT
     http_client_timeout_pool = HTTP_CLIENT_TIMEOUT_POOL
+
 
 config = Config()
