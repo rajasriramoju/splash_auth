@@ -10,7 +10,7 @@ from fastapi.security import HTTPBearer
 from jose import jwt
 from starlette.background import BackgroundTask
 from starlette.responses import StreamingResponse
-from starlette.status import HTTP_403_FORBIDDEN, HTTP_502_BAD_GATEWAY
+from starlette.status import HTTP_403_FORBIDDEN, HTTP_401_UNAUTHORIZED
 
 from .config import config
 from .oidc import oidc_router
@@ -96,7 +96,7 @@ async def endpoint_login(redirect: Union[str, None] = None):
 @app.api_route(
     "/{path:path}", methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS", "HEAD"]
 )
-async def endpoint_reverse_proxy(
+def endpoint_reverse_proxy(
     request: Request,
     response: Response,
     als_token: Union[str, None] = Cookie(default=None),
@@ -120,7 +120,8 @@ async def endpoint_reverse_proxy(
     # check for api key in bearer
     if bearer:
         if bearer.credentials in users_db.api_keys:
-            return await _reverse_proxy(request)
+            response.status_code = 200
+            return response
         else:
             logger.debug(f"bearer found, but unknown api_key  {bearer.credentials}")
             raise HTTPException(
@@ -129,7 +130,9 @@ async def endpoint_reverse_proxy(
 
     # check for cookie
     if not als_token:
-        return RedirectResponse("/login")
+        raise HTTPException(
+                status_code=HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
+            )
 
     # check if cookie's value is valid
     try:
@@ -137,44 +140,11 @@ async def endpoint_reverse_proxy(
     except jwt.ExpiredSignatureError:
         # Signature has expired
         logger.debug("Signature expired in cookie")
-        return RedirectResponse("/login")
+        raise HTTPException(
+                status_code=HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
+            )
 
     response.status_code = 200
-    try:
-        return await _reverse_proxy(request)
-    except Exception:
-        #  a problem exists with the client not accepting new connections
-        #  this is ugly, but we try and keep the service running by killing
-        #  the client and starting fresh
-        logger.error("Exception from http client", exc_info=1)
-        global client
-        await client.aclose()
-        client = new_httpx_client()
-        raise HTTPException(
-            status_code=HTTP_502_BAD_GATEWAY, detail="Excpetion talking to service"
-        )
+    response.content = "Authentication success"
+    return response
 
-
-async def close(resp: StreamingResponse):
-    await resp.aclose()
-
-
-async def _reverse_proxy(
-    request: Request, scopes: Optional[List[str]] = None
-) -> StreamingResponse:
-    # # cheap and quick scope feature
-    # if scopes and request.method.lower() in sceope
-    global client
-
-    url = httpx.URL(path=request.url.path, query=request.url.query.encode("utf-8"))
-    rp_req = client.build_request(
-        request.method, url, headers=request.headers.raw, content=await request.body()
-    )
-
-    rp_resp = await client.send(rp_req, stream=True)
-    return StreamingResponse(
-        rp_resp.aiter_raw(),
-        status_code=rp_resp.status_code,
-        headers=rp_resp.headers,
-        background=BackgroundTask(close, rp_resp),
-    )
